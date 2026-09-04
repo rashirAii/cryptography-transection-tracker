@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoPulse - Major Project Enterprise Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0b0f19',
+                        cardbg: '#111827',
+                        cardborder: '#1f2937',
+                        accent: '#3b82f6',
+                        accenthover: '#2563eb'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glow-accent {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);
+        }
+        .glow-alert {
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- TOP NAVBAR -->
+    <header class="sticky top-0 z-30 glass-panel border-b border-gray-800 px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-2.5 rounded-xl text-white shadow-lg glow-accent">
+                <i class="fa-solid fa-graduation-cap text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent">
+                    CryptoPulse Enterprise
+                </h1>
+                <p class="text-xs text-gray-400">Major Project System • SQL Engine & ML Risk Scoring</p>
+            </div>
+        </div>
+
+        <div class="flex items-center flex-wrap gap-2">
+            <button onclick="syncLivePrices()" class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-semibold px-3 py-2 rounded-lg flex items-center space-x-1.5 transition">
+                <i class="fa-solid fa-arrows-rotate animate-spin-hover"></i>
+                <span>Sync Live Prices</span>
+            </button>
+            <a href="/api/export/audit-report" target="_blank" class="bg-gray-800 hover:bg-gray-700 text-amber-400 border border-gray-700 text-xs font-semibold px-3 py-2 rounded-lg flex items-center space-x-1.5 transition">
+                <i class="fa-solid fa-certificate"></i>
+                <span class="hidden sm:inline">Print Audit Certificate</span>
+            </a>
+            <a href="/api/export/transactions" download class="bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 text-xs font-semibold px-3 py-2 rounded-lg flex items-center space-x-1.5 transition">
+                <i class="fa-solid fa-file-csv text-blue-400"></i>
+                <span class="hidden sm:inline">Export CSV</span>
+            </a>
+            <button onclick="openUserModal()" class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-3 py-2 rounded-lg flex items-center space-x-1.5 shadow transition">
+                <i class="fa-solid fa-user-plus"></i>
+                <span class="hidden sm:inline">Add User</span>
+            </button>
+            <button onclick="openTxModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center space-x-2 shadow-lg transition glow-accent">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>New Transaction</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+
+        <!-- KPI STAT CARDS -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="glass-panel p-4 rounded-2xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-gray-400 uppercase">Total USD Volume</p>
+                    <h3 id="stat-volume" class="text-xl font-bold text-white mt-1">$0.00</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-dollar-sign"></i>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 rounded-2xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-gray-400 uppercase">Users / Wallets</p>
+                    <h3 id="stat-users-wallets" class="text-xl font-bold text-white mt-1">0 / 0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 rounded-2xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-gray-400 uppercase">Gas Fees Burned</p>
+                    <h3 id="stat-gas" class="text-xl font-bold text-white mt-1">$0.00</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-gas-pump"></i>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 rounded-2xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-gray-400 uppercase">Staking Rewards</p>
+                    <h3 id="stat-rewards" class="text-xl font-bold text-emerald-400 mt-1">0.00 Crypto</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-seedling"></i>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 rounded-2xl flex items-center justify-between border-red-500/30">
+                <div>
+                    <p class="text-xs font-medium text-gray-400 uppercase">AML Risk Alerts</p>
+                    <h3 id="stat-alerts" class="text-xl font-bold text-red-400 mt-1">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-shield-cat"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHARTS & CALCULATOR ROW -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="glass-panel p-5 rounded-2xl lg:col-span-2 flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-base text-white flex items-center gap-2">
+                        <i class="fa-solid fa-chart-line text-blue-400"></i> Crypto Asset Price History (Live USD)
+                    </h3>
+                    <span class="text-xs bg-gray-800 text-gray-300 px-2.5 py-1 rounded-full border border-gray-700">Market Feed</span>
+                </div>
+                <div class="h-60 relative">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-panel p-5 rounded-2xl flex flex-col justify-between space-y-4">
+                <h3 class="font-bold text-base text-white flex items-center gap-2">
+                    <i class="fa-solid fa-calculator text-emerald-400"></i> Instant Price Calculator
+                </h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Asset Amount</label>
+                        <input type="number" id="calcAmount" value="1.0" oninput="calculateConversion()" class="w-full bg-gray-900 border border-gray-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Select Asset</label>
+                        <select id="calcAsset" onchange="calculateConversion()" class="w-full bg-gray-900 border border-gray-800 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-emerald-500"></select>
+                    </div>
+                    <div class="p-3 bg-gray-900/80 rounded-xl border border-gray-800/80 text-center">
+                        <p class="text-xs text-gray-400">Estimated Market Value</p>
+                        <h4 id="calcResult" class="text-xl font-bold text-emerald-400 mt-1">$0.00 USD</h4>
+                    </div>
+                </div>
+                <p class="text-[11px] text-gray-500 text-center">Calculated using SQLite live exchange rates.</p>
+            </div>
+        </div>
+
+        <!-- MAIN NAVIGATION TABS -->
+        <div class="glass-panel rounded-2xl overflow-hidden">
+            <div class="border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="switchTab('txs')" id="tab-txs" class="px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white transition">
+                        <i class="fa-solid fa-list-check mr-1.5"></i>Transactions Ledger & ML Risk
+                    </button>
+                    <button onclick="switchTab('portfolio')" id="tab-portfolio" class="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition">
+                        <i class="fa-solid fa-vault mr-1.5"></i>Portfolios
+                    </button>
+                    <button onclick="switchTab('staking')" id="tab-staking" class="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition">
+                        <i class="fa-solid fa-seedling mr-1.5"></i>Staking & APY Yield
+                    </button>
+                    <button onclick="switchTab('playground')" id="tab-playground" class="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition">
+                        <i class="fa-solid fa-terminal mr-1.5"></i>SQL Playground Console
+                    </button>
+                    <button onclick="switchTab('alerts')" id="tab-alerts" class="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition">
+                        <i class="fa-solid fa-triangle-exclamation mr-1.5"></i>AML Audit Log
+                    </button>
+                </div>
+
+                <div id="search-container" class="relative w-64">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-500 text-xs"></i>
+                    <input type="text" id="table-search" placeholder="Search transactions..." onkeyup="filterTransactions()" class="w-full bg-gray-900 text-xs text-gray-200 pl-8 pr-3 py-2 rounded-lg border border-gray-800 focus:outline-none focus:border-blue-500">
+                </div>
+            </div>
+
+            <!-- TAB 1: TRANSACTIONS LEDGER & ML RISK -->
+            <div id="content-txs" class="p-6 overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-xs uppercase text-gray-400 border-b border-gray-800">
+                            <th class="pb-3 font-semibold">Tx Hash</th>
+                            <th class="pb-3 font-semibold">Type</th>
+                            <th class="pb-3 font-semibold">ML Risk Rating</th>
+                            <th class="pb-3 font-semibold">Sender</th>
+                            <th class="pb-3 font-semibold">Receiver</th>
+                            <th class="pb-3 font-semibold">Amount</th>
+                            <th class="pb-3 font-semibold">USD Value</th>
+                            <th class="pb-3 font-semibold">Gas Fee</th>
+                            <th class="pb-3 font-semibold">Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="txs-table-body" class="divide-y divide-gray-800/50 text-sm"></tbody>
+                </table>
+            </div>
+
+            <!-- TAB 2: PORTFOLIO -->
+            <div id="content-portfolio" class="p-6 overflow-x-auto hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-xs uppercase text-gray-400 border-b border-gray-800">
+                            <th class="pb-3 font-semibold">User</th>
+                            <th class="pb-3 font-semibold">Symbol</th>
+                            <th class="pb-3 font-semibold">Asset Name</th>
+                            <th class="pb-3 font-semibold">Holdings</th>
+                            <th class="pb-3 font-semibold">Market Rate (USD)</th>
+                            <th class="pb-3 font-semibold">Total Valuation (USD)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolio-table-body" class="divide-y divide-gray-800/50 text-sm"></tbody>
+                </table>
+            </div>
+
+            <!-- TAB 3: STAKING -->
+            <div id="content-staking" class="p-6 overflow-x-auto hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-xs uppercase text-gray-400 border-b border-gray-800">
+                            <th class="pb-3 font-semibold">User</th>
+                            <th class="pb-3 font-semibold">Asset</th>
+                            <th class="pb-3 font-semibold">Staked Amount</th>
+                            <th class="pb-3 font-semibold">APY Yield</th>
+                            <th class="pb-3 font-semibold">Earned Rewards</th>
+                            <th class="pb-3 font-semibold">Projected Annual Return</th>
+                            <th class="pb-3 font-semibold">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="staking-table-body" class="divide-y divide-gray-800/50 text-sm"></tbody>
+                </table>
+            </div>
+
+            <!-- TAB 4: SQL PLAYGROUND CONSOLE -->
+            <div id="content-playground" class="p-6 space-y-4 hidden">
+                <div class="flex flex-wrap gap-2">
+                    <span class="text-xs font-semibold text-gray-400 self-center mr-2">Template Queries:</span>
+                    <button onclick="loadSqlTemplate('whale')" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-xs text-blue-400 rounded-md border border-gray-700">🐋 Whale Watcher (> $50k)</button>
+                    <button onclick="loadSqlTemplate('velocity')" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-xs text-amber-400 rounded-md border border-gray-700">⏱️ Velocity Check (< 5 min)</button>
+                    <button onclick="loadSqlTemplate('running')" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-xs text-purple-400 rounded-md border border-gray-700">📊 Window Function Running Balance</button>
+                    <button onclick="loadSqlTemplate('gas')" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-xs text-emerald-400 rounded-md border border-gray-700">⛽ Gas Fee Leaderboard</button>
+                </div>
+
+                <div class="relative">
+                    <textarea id="sqlConsole" rows="4" class="w-full bg-gray-950 font-mono text-xs text-emerald-400 p-4 rounded-xl border border-gray-800 focus:outline-none focus:border-blue-500" placeholder="SELECT * FROM transactions LIMIT 10;"></textarea>
+                    <button onclick="executePlaygroundQuery()" class="absolute bottom-3 right-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-lg shadow">
+                        <i class="fa-solid fa-play mr-1"></i> Run SQL Query
+                    </button>
+                </div>
+
+                <div id="queryResults" class="overflow-x-auto bg-gray-900/50 p-4 rounded-xl border border-gray-800 min-h-[120px]">
+                    <p class="text-xs text-gray-500">Query results will appear here...</p>
+                </div>
+            </div>
+
+            <!-- TAB 5: AML ALERTS -->
+            <div id="content-alerts" class="p-6 overflow-x-auto hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-xs uppercase text-gray-400 border-b border-gray-800">
+                            <th class="pb-3 font-semibold">Alert ID</th>
+                            <th class="pb-3 font-semibold">Severity</th>
+                            <th class="pb-3 font-semibold">Alert Type</th>
+                            <th class="pb-3 font-semibold">Tx Hash</th>
+                            <th class="pb-3 font-semibold">Description</th>
+                            <th class="pb-3 font-semibold">Trigger Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alerts-table-body" class="divide-y divide-gray-800/50 text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- NEW TRANSACTION MODAL -->
+    <div id="txModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="glass-panel w-full max-w-lg p-6 rounded-2xl shadow-2xl relative border border-gray-700">
+            <button onclick="closeTxModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <h2 class="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                <i class="fa-solid fa-paper-plane text-blue-400"></i> Execute New Transaction
+            </h2>
+            <p class="text-xs text-gray-400 mb-5">Submits transaction to SQLite and triggers AML risk monitoring.</p>
+
+            <form id="txForm" onsubmit="submitTransaction(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Sender Wallet</label>
+                    <select id="modalSender" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-blue-500">
+                        <option value="">External Deposit / Off-chain Exchange</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Receiver Wallet</label>
+                    <select id="modalReceiver" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-blue-500">
+                        <option value="">External Off-ramp / DeFi Protocol</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Crypto Asset</label>
+                        <select id="modalCrypto" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-blue-500"></select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Transaction Type</label>
+                        <select id="modalType" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-blue-500">
+                            <option value="TRANSFER">TRANSFER</option>
+                            <option value="DEPOSIT">DEPOSIT</option>
+                            <option value="WITHDRAWAL">WITHDRAWAL</option>
+                            <option value="SWAP">SWAP</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Amount</label>
+                    <input type="number" step="any" id="modalAmount" required placeholder="0.00" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-blue-500">
+                    <p class="text-[11px] text-amber-400 mt-1"><i class="fa-solid fa-circle-info"></i> Transactions >= $100,000 auto-trigger AML Fraud Alerts.</p>
+                </div>
+
+                <div class="pt-2 flex justify-end space-x-3">
+                    <button type="button" onclick="closeTxModal()" class="px-4 py-2 rounded-lg bg-gray-800 text-gray-300 text-xs font-semibold hover:bg-gray-700">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow glow-accent">Execute Transaction</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ADD USER MODAL -->
+    <div id="userModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="glass-panel w-full max-w-md p-6 rounded-2xl shadow-2xl relative border border-gray-700">
+            <button onclick="closeUserModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <h2 class="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                <i class="fa-solid fa-user-plus text-purple-400"></i> Register New User & Wallet
+            </h2>
+            <p class="text-xs text-gray-400 mb-5">Adds user to SQLite database and auto-generates a crypto wallet address.</p>
+
+            <form id="userForm" onsubmit="submitNewUser(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Username</label>
+                    <input type="text" id="userUsername" required placeholder="e.g. crypto_trader99" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-purple-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Email</label>
+                    <input type="email" id="userEmail" required placeholder="trader@blockchain.com" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-purple-500">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Country</label>
+                        <input type="text" id="userCountry" value="USA" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">KYC Status</label>
+                        <select id="userKyc" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200 focus:outline-none focus:border-purple-500">
+                            <option value="VERIFIED">VERIFIED</option>
+                            <option value="PENDING">PENDING</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex justify-end space-x-3">
+                    <button type="button" onclick="closeUserModal()" class="px-4 py-2 rounded-lg bg-gray-800 text-gray-300 text-xs font-semibold hover:bg-gray-700">Cancel</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow">Register User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-3"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
