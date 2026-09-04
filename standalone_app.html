@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoPulse - Portable Standalone WebAssembly Edition</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SQL.js (SQLite WebAssembly in-browser database) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0b0f19',
+                        cardbg: '#111827',
+                        cardborder: '#1f2937'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #0b0f19; color: #f3f4f6; font-family: 'Inter', system-ui, sans-serif; }
+        .glass-panel { background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .glow-accent { box-shadow: 0 0 20px rgba(59, 130, 246, 0.25); }
+        .glow-alert { box-shadow: 0 0 20px rgba(239, 68, 68, 0.3); }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- TOP NAVBAR -->
+    <header class="sticky top-0 z-30 glass-panel border-b border-gray-800 px-6 py-3.5 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-r from-emerald-600 to-teal-600 p-2.5 rounded-xl text-white shadow-lg glow-accent">
+                <i class="fa-solid fa-laptop-code text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-wide bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+                    CryptoPulse Portable Edition
+                </h1>
+                <p class="text-xs text-gray-400">Zero Server • In-Browser SQLite WebAssembly Engine</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <span class="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold rounded-full flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Standalone Offline
+            </span>
+            <button onclick="openTxModal()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded-lg flex items-center space-x-2 shadow-lg glow-accent">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span>New Transaction</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+
+        <!-- KPI STAT CARDS -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="glass-panel p-4 rounded-2xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-gray-400 uppercase">Total Volume (USD)</p>
+                    <h3 id="stat-volume" class="text-xl font-bold text-white mt-1">$0.00</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-dollar-sign"></i>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 rounded-2xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-gray-400 uppercase">Active Users</p>
+                    <h3 id="stat-users" class="text-xl font-bold text-white mt-1">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 rounded-2xl flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-gray-400 uppercase">Gas Fees Burned</p>
+                    <h3 id="stat-gas" class="text-xl font-bold text-white mt-1">$0.00</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-gas-pump"></i>
+                </div>
+            </div>
+
+            <div class="glass-panel p-4 rounded-2xl flex items-center justify-between border-red-500/30">
+                <div>
+                    <p class="text-xs font-medium text-gray-400 uppercase">AML Risk Alerts</p>
+                    <h3 id="stat-alerts" class="text-xl font-bold text-red-400 mt-1">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-red-500/10 text-red-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-shield-cat"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN TABS & TABLES -->
+        <div class="glass-panel rounded-2xl overflow-hidden">
+            <div class="border-b border-gray-800 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex space-x-2">
+                    <button onclick="switchTab('txs')" id="tab-txs" class="px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white">
+                        <i class="fa-solid fa-list-check mr-1.5"></i>Transactions Ledger
+                    </button>
+                    <button onclick="switchTab('portfolio')" id="tab-portfolio" class="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700">
+                        <i class="fa-solid fa-vault mr-1.5"></i>User Portfolios
+                    </button>
+                    <button onclick="switchTab('playground')" id="tab-playground" class="px-4 py-2 text-xs font-semibold rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700">
+                        <i class="fa-solid fa-terminal mr-1.5"></i>Browser SQL Playground
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 1: TRANSACTIONS LEDGER -->
+            <div id="content-txs" class="p-6 overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-xs uppercase text-gray-400 border-b border-gray-800">
+                            <th class="pb-3 font-semibold">Tx Hash</th>
+                            <th class="pb-3 font-semibold">Type</th>
+                            <th class="pb-3 font-semibold">Sender</th>
+                            <th class="pb-3 font-semibold">Receiver</th>
+                            <th class="pb-3 font-semibold">Amount</th>
+                            <th class="pb-3 font-semibold">USD Value</th>
+                            <th class="pb-3 font-semibold">Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="txs-table-body" class="divide-y divide-gray-800/50 text-sm"></tbody>
+                </table>
+            </div>
+
+            <!-- TAB 2: PORTFOLIO -->
+            <div id="content-portfolio" class="p-6 overflow-x-auto hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-xs uppercase text-gray-400 border-b border-gray-800">
+                            <th class="pb-3 font-semibold">User</th>
+                            <th class="pb-3 font-semibold">Symbol</th>
+                            <th class="pb-3 font-semibold">Holdings</th>
+                            <th class="pb-3 font-semibold">Rate (USD)</th>
+                            <th class="pb-3 font-semibold">Total Value (USD)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolio-table-body" class="divide-y divide-gray-800/50 text-sm"></tbody>
+                </table>
+            </div>
+
+            <!-- TAB 3: SQL PLAYGROUND -->
+            <div id="content-playground" class="p-6 space-y-4 hidden">
+                <textarea id="sqlConsole" rows="4" class="w-full bg-gray-950 font-mono text-xs text-emerald-400 p-4 rounded-xl border border-gray-800 focus:outline-none" placeholder="SELECT * FROM transactions LIMIT 10;"></textarea>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs text-gray-400">Runs live against WebAssembly SQLite database engine in browser memory.</span>
+                    <button onclick="executePlaygroundQuery()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-4 py-2 rounded-lg">
+                        <i class="fa-solid fa-play mr-1"></i> Run SQL
+                    </button>
+                </div>
+                <div id="queryResults" class="overflow-x-auto bg-gray-900/50 p-4 rounded-xl border border-gray-800 min-h-[100px]"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- NEW TRANSACTION MODAL -->
+    <div id="txModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="glass-panel w-full max-w-lg p-6 rounded-2xl shadow-2xl relative border border-gray-700">
+            <button onclick="closeTxModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <h2 class="text-lg font-bold text-white mb-1">Execute Transaction</h2>
+            <p class="text-xs text-gray-400 mb-4">Executes directly into WebAssembly SQLite DB.</p>
+
+            <form onsubmit="submitTransaction(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-300 uppercase mb-1">Crypto Asset</label>
+                    <select id="modalCrypto" required class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200">
+                        <option value="1">BTC (Bitcoin) - $65,000</option>
+                        <option value="2">ETH (Ethereum) - $3,600</option>
+                        <option value="3">SOL (Solana) - $155</option>
+                        <option value="4">USDT (Tether) - $1</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-300 uppercase mb-1">Amount</label>
+                    <input type="number" step="any" id="modalAmount" required placeholder="0.00" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs text-gray-200">
+                </div>
+                <div class="pt-2 flex justify-end space-x-3">
+                    <button type="button" onclick="closeTxModal()" class="px-4 py-2 bg-gray-800 text-gray-300 text-xs rounded-lg">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-600 text-white text-xs font-semibold rounded-lg">Execute SQL</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col space-y-3"></div>
+
+    <script>
+        let db = null;
+
+        // Initialize WebAssembly SQLite Engine
+        window.addEventListener("DOMContentLoaded", async () => {
+            try {
+                const SQL = await initSqlJs({
+                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+                });
+                db = new SQL.Database();
+                
+                // Initialize Schema & Seed Data
+                db.run(`
+                    CREATE TABLE users (user_id INTEGER PRIMARY KEY, username TEXT, email TEXT);
+                    CREATE TABLE cryptocurrencies (crypto_id INTEGER PRIMARY KEY, symbol TEXT, name TEXT);
+                    CREATE TABLE exchange_rates (rate_id INTEGER PRIMARY KEY, crypto_id INTEGER, price_usd REAL);
+                    CREATE TABLE transactions (transaction_id INTEGER PRIMARY KEY, tx_hash TEXT, crypto_id INTEGER, amount REAL, gas_fee_usd REAL, tx_type TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP);
+                    CREATE TABLE fraud_alerts (alert_id INTEGER PRIMARY KEY, transaction_id INTEGER, description TEXT);
+
+                    INSERT INTO users VALUES (1, 'alice_crypto', 'alice@btc.io'), (2, 'bob_trader', 'bob@eth.uk'), (3, 'satoshi_whale', 'whale@satoshi.jp');
+                    INSERT INTO cryptocurrencies VALUES (1, 'BTC', 'Bitcoin'), (2, 'ETH', 'Ethereum'), (3, 'SOL', 'Solana'), (4, 'USDT', 'Tether');
+                    INSERT INTO exchange_rates VALUES (1, 1, 65000.0), (2, 2, 3600.0), (3, 3, 155.0), (4, 4, 1.0);
+
+                    INSERT INTO transactions VALUES 
+                    (1, '0xtx_001_alice_btc', 1, 5.0, 6.20, 'DEPOSIT', '2026-09-01 08:30:00'),
+                    (2, '0xtx_002_alice_eth', 2, 25.0, 6.80, 'DEPOSIT', '2026-09-01 09:15:00'),
+                    (3, '0xtx_003_whale_btc', 1, 500.0, 31.75, 'DEPOSIT', '2026-09-01 11:00:00');
+                `);
+
+                loadDashboardData();
+            } catch (err) {
+                console.error("WebAssembly SQL Error:", err);
+            }
+        });
+
+        function loadDashboardData() {
+            if (!db) return;
+
+            // Stats
+            const resVal = db.exec("SELECT SUM(t.amount * er.price_usd) FROM transactions t JOIN exchange_rates er ON t.crypto_id = er.crypto_id")[0];
+            const totalVal = resVal && resVal.values[0][0] ? resVal.values[0][0] : 0;
+            document.getElementById("stat-volume").innerText = "$" + Number(totalVal).toLocaleString(undefined, {minimumFractionDigits: 2});
+
+            const resUsers = db.exec("SELECT COUNT(*) FROM users")[0];
+            document.getElementById("stat-users").innerText = resUsers.values[0][0];
+
+            const resGas = db.exec("SELECT SUM(gas_fee_usd) FROM transactions")[0];
+            document.getElementById("stat-gas").innerText = "$" + Number(resGas.values[0][0] || 0).toFixed(2);
+
+            const resAlerts = db.exec("SELECT COUNT(*) FROM fraud_alerts")[0];
+            document.getElementById("stat-alerts").innerText = resAlerts.values[0][0];
+
+            // Render Transactions Table
+            const txRes = db.exec("SELECT t.tx_hash, t.tx_type, c.symbol, t.amount, (t.amount * er.price_usd) AS usd_val, t.timestamp FROM transactions t JOIN cryptocurrencies c ON t.crypto_id = c.crypto_id JOIN exchange_rates er ON t.crypto_id = er.crypto_id ORDER BY t.transaction_id DESC");
+            const tbody = document.getElementById("txs-table-body");
+            tbody.innerHTML = "";
+            if (txRes.length > 0) {
+                txRes[0].values.forEach(r => {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-gray-800/40">
+                            <td class="py-3 font-mono text-xs text-blue-400">${r[0]}</td>
+                            <td class="py-3"><span class="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-xs">${r[1]}</span></td>
+                            <td class="py-3 text-gray-300">Wallet Account</td>
+                            <td class="py-3 text-gray-300">Recipient Account</td>
+                            <td class="py-3 font-bold text-white">${r[3]} ${r[2]}</td>
+                            <td class="py-3 text-emerald-400 font-bold">$${Number(r[4]).toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                            <td class="py-3 text-xs text-gray-500">${r[5]}</td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        function submitTransaction(e) {
+            e.preventDefault();
+            const cryptoId = parseInt(document.getElementById("modalCrypto").value);
+            const amount = parseFloat(document.getElementById("modalAmount").value);
+            const txHash = "0xtx_" + Math.random().toString(36).substring(2, 12);
+
+            db.run("INSERT INTO transactions (tx_hash, crypto_id, amount, gas_fee_usd, tx_type) VALUES (?, ?, ?, 5.0, 'TRANSFER')", [txHash, cryptoId, amount]);
+            
+            // Trigger check: > $100k
+            const rateRes = db.exec(`SELECT price_usd FROM exchange_rates WHERE crypto_id = ${cryptoId}`)[0];
+            const price = rateRes ? rateRes.values[0][0] : 1.0;
+            if ((amount * price) >= 100000.0) {
+                db.run("INSERT INTO fraud_alerts (transaction_id, description) VALUES ((SELECT MAX(transaction_id) FROM transactions), 'High Value > $100k')");
+                showToast("🚨 AML FRAUD ALERT!", "High Value Transaction > $100k logged in WebAssembly SQLite!", "danger");
+            } else {
+                showToast("✅ Transaction Executed!", "Saved directly into in-memory SQLite DB.", "success");
+            }
+
+            closeTxModal();
+            loadDashboardData();
+        }
+
+        function executePlaygroundQuery() {
+            const query = document.getElementById("sqlConsole").value.trim();
+            const div = document.getElementById("queryResults");
+            try {
+                const res = db.exec(query);
+                if (res.length === 0) {
+                    div.innerHTML = "<p class='text-xs text-gray-400'>Query executed successfully (0 rows).</p>";
+                    return;
+                }
+                let html = "<table class='w-full text-left font-mono text-xs'><thead class='text-gray-400 border-b border-gray-800'><tr>";
+                res[0].columns.forEach(c => html += `<th class='pb-2 pr-4'>${c}</th>`);
+                html += "</tr></thead><tbody>";
+                res[0].values.forEach(row => {
+                    html += "<tr class='hover:bg-gray-800/30'>";
+                    row.forEach(v => html += `<td class='py-2 pr-4 text-gray-200'>${v}</td>`);
+                    html += "</tr>";
+                });
+                html += "</table>";
+                div.innerHTML = html;
+            } catch (err) {
+                div.innerHTML = `<p class='text-xs text-red-400 font-mono'>SQL Error: ${err.message}</p>`;
+            }
+        }
+
+        function switchTab(t) {
+            ['txs', 'portfolio', 'playground'].forEach(tab => {
+                document.getElementById(`content-${tab}`).classList.add("hidden");
+                document.getElementById(`tab-${tab}`).className = "px-4 py-2 text-xs font-semibold rounded-lg bg-gray-800 text-gray-400 hover:bg-gray-700";
+            });
+            document.getElementById(`content-${t}`).classList.remove("hidden");
+            document.getElementById(`tab-${t}`).className = "px-4 py-2 text-xs font-semibold rounded-lg bg-blue-600 text-white";
+        }
+
+        function openTxModal() { document.getElementById("txModal").classList.remove("hidden"); }
+        function closeTxModal() { document.getElementById("txModal").classList.add("hidden"); }
+
+        function showToast(title, msg, type = "success") {
+            const container = document.getElementById("toastContainer");
+            const toast = document.createElement("div");
+            const bg = type === "success" ? "bg-emerald-900 border-emerald-500 text-emerald-200" : "bg-red-900 border-red-500 text-red-200 glow-alert";
+            toast.className = `${bg} border px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-3 text-xs`;
+            toast.innerHTML = `<div><h4 class="font-bold">${title}</h4><p>${msg}</p></div>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+    </script>
+</body>
+</html>
